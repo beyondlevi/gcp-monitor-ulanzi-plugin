@@ -4,7 +4,7 @@ const METRICS = {
   gce: {
     cpu: { type: 'compute.googleapis.com/instance/cpu/utilization', aligner: 'ALIGN_MEAN', scale: 100, kind: 'percent' },
     mem: { type: 'agent.googleapis.com/memory/percent_used', aligner: 'ALIGN_MEAN', scale: 1, kind: 'percent', extra: 'metric.labels.state="used"' },
-    disk: { type: 'agent.googleapis.com/disk/percent_used', aligner: 'ALIGN_MEAN', scale: 1, kind: 'percent', extra: 'metric.labels.state="used"', reducer: 'REDUCE_MAX' },
+    disk: { type: 'agent.googleapis.com/disk/percent_used', aligner: 'ALIGN_MEAN', scale: 1, kind: 'percent', extra: 'metric.labels.state="used" AND metric.labels.device != monitoring.regex.full_match(".*loop.*")', reducer: 'REDUCE_MAX' },
   },
   cloudsql: {
     cpu: { type: 'cloudsql.googleapis.com/database/cpu/utilization', aligner: 'ALIGN_MEAN', scale: 100, kind: 'percent' },

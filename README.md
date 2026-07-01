@@ -66,6 +66,7 @@ Ulanzi Studio  ──WebSocket──▶  plugin/app.js (Node.js)
   | Connections | — | `cloudsql.googleapis.com/database/network/connections` |
 
 - **Ops Agent (Compute Engine only):** RAM and Disk are produced by the [Ops Agent](https://cloud.google.com/monitoring/agent/ops-agent/install-index). If it is not installed, those metrics show `N/A` — the key is *not* marked down for that reason alone. Cloud SQL reports every metric natively, no agent required.
+- **Disk on Compute Engine** reports the busiest real partition (`REDUCE_MAX` across devices) but **excludes snap `/dev/loop*` devices**, which the Ops Agent always reports at ~100% (they are read-only squashfs mounts) and would otherwise falsely pin the gauge at 100%.
 - The service queries a 12-minute lookback window and keeps the most recent point per metric. "Freshness" is compared against your **Down after (min)** setting.
 - Icons are generated as SVG in Node.js, base64-encoded, and pushed to the key via `setBaseDataIcon` — no image files on disk, no native image libraries.
 
@@ -161,6 +162,7 @@ The plugin reads every logged-in account from `gcloud auth list`. Pick one per k
 | Empty **Database** list | Cloud SQL Admin API disabled or missing role | Enable `sqladmin.googleapis.com` and grant `roles/cloudsql.viewer` |
 | `project not found` | Wrong project / no access | Reselect the project for the chosen account |
 | RAM / Disk show `N/A` | Ops Agent not installed (Compute Engine) | Install the Ops Agent on the VM (CPU keeps working regardless); Cloud SQL needs no agent |
+| Disk stuck near `100%` while the VM disk is fine | Ops Agent also reports snap `/dev/loop*` mounts at 100% | Fixed in **v1.2.1** — loop devices are excluded from the disk gauge |
 | Key shows DOWN but resource is up | Threshold too tight or metrics lag | Increase **Down after (min)** |
 
 ## Development
