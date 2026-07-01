@@ -1,14 +1,26 @@
 {
   "Name": "GCP Monitor",
-  "Description": "Show CPU and RAM of a Google Cloud (GCE) VM on a key. Alerts when the machine is down or has no data in the last minutes.",
+  "Description": "Show live metrics of Google Cloud Compute Engine VMs and Cloud SQL databases on a key. Alerts when the resource is down or has no data in the last minutes.",
   "Actions": [
-    { "Name": "VM CPU / RAM", "Tooltip": "Monitor CPU and RAM of a GCP Compute Engine instance" }
+    { "Name": "VM / Cloud SQL", "Tooltip": "Monitor CPU, RAM, Disk (and Connections for Cloud SQL) of a GCP Compute Engine VM or Cloud SQL instance" }
   ],
   "Localization": {
     "Google Cloud": "Google Cloud",
     "Account": "Account",
     "Project": "Project",
+    "Resource": "Resource",
+    "Compute Engine (VM)": "Compute Engine (VM)",
+    "Cloud SQL (database)": "Cloud SQL (database)",
     "Instance": "Instance",
+    "Database": "Database",
+    "Display": "Display",
+    "Metrics": "Metrics",
+    "RAM": "RAM",
+    "Disk": "Disk",
+    "Connections": "Connections",
+    "Name on top": "Name on top",
+    "Show name on the key": "Show name on the key",
+    "Pick up to 2 metrics, or 3 with the name hidden.": "Pick up to 2 metrics, or 3 with the name hidden.",
     "Options": "Options",
     "Refresh (s)": "Refresh (s)",
     "Down after (min)": "Down after (min)",
@@ -19,7 +31,7 @@
     "Reading gcloud accounts...": "Reading gcloud accounts...",
     "Advanced": "Advanced",
     "gcloud path": "gcloud path",
-    "Leave empty to auto-detect gcloud. RAM (%) needs the Ops Agent installed on the VM.": "Leave empty to auto-detect gcloud. RAM (%) needs the Ops Agent installed on the VM.",
+    "Leave empty to auto-detect gcloud. On Compute Engine, RAM/Disk need the Ops Agent; Cloud SQL reports every metric natively.": "Leave empty to auto-detect gcloud. On Compute Engine, RAM/Disk need the Ops Agent; Cloud SQL reports every metric natively.",
     "Loading...": "Loading...",
     "Select a project first": "Select a project first"
   }

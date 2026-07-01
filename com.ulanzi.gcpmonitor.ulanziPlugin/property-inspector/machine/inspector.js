@@ -1,7 +1,11 @@
 const ACTION_UUID = 'com.ulanzi.ulanzistudio.gcpmonitor.machine';
+const METRIC_KEYS = ['cpu', 'mem', 'disk', 'conn'];
+const DEFAULT_METRICS = ['cpu', 'mem'];
+const RUNNING_STATES = ['RUNNING', 'RUNNABLE'];
 
 let form;
 let els;
+let metricInputs;
 let saved = {};
 let gotAccounts = false;
 let gotProjects = false;
@@ -9,24 +13,31 @@ let gotProjects = false;
 $UD.connect(ACTION_UUID);
 
 $UD.onConnected(() => {
-  form = document.querySelector('#property-inspector');
+  form = q('#property-inspector');
   els = {
     account: q('#account'),
     projectId: q('#projectId'),
+    resourceType: q('#resourceType'),
     instanceId: q('#instanceId'),
     instanceName: q('#instanceName'),
+    instanceLabel: q('#instanceLabel'),
     zone: q('#zone'),
     clickAction: q('#clickAction'),
     refreshInterval: q('#refreshInterval'),
     downThresholdMinutes: q('#downThresholdMinutes'),
     gcloudPath: q('#gcloudPath'),
     refreshBtn: q('#refreshBtn'),
+    showName: q('#showName'),
+    connOpt: q('#opt_conn'),
+    metricsHint: q('#metricsHint'),
     status: q('#status'),
     overlay: q('#overlay'),
   };
+  metricInputs = Object.fromEntries(METRIC_KEYS.map((k) => [k, q(`#m_${k}`)]));
 
   document.querySelector('.uspi-wrapper').classList.remove('hidden');
   wireEvents();
+  initDefaults();
   requestAccounts();
 });
 
@@ -66,12 +77,16 @@ function wireEvents() {
     requestInstances(els.projectId.value, currentAccount());
   });
 
+  els.resourceType.addEventListener('change', onResourceTypeChange);
+
   els.instanceId.addEventListener('change', () => {
     syncInstanceHidden();
     saved.instanceId = els.instanceId.value;
     save();
   });
 
+  METRIC_KEYS.forEach((k) => metricInputs[k].addEventListener('change', onMetricToggle));
+  els.showName.addEventListener('change', onShowNameToggle);
   els.refreshBtn.addEventListener('click', requestAccounts);
 }
 
@@ -79,13 +94,94 @@ function currentAccount() {
   return els.account.value || saved.account || undefined;
 }
 
+function currentType() {
+  return els.resourceType.value === 'cloudsql' ? 'cloudsql' : 'gce';
+}
+
+function currentProject() {
+  return els.projectId.value || saved.projectId || '';
+}
+
 function getGcloudPath() {
   const v = els.gcloudPath.value.trim();
   return v || undefined;
 }
 
+function maxMetrics() {
+  return els.showName.checked ? 2 : 3;
+}
+
+function getSelectedMetrics() {
+  const type = currentType();
+  return METRIC_KEYS.filter((k) => (k !== 'conn' || type === 'cloudsql') && metricInputs[k].checked);
+}
+
+function initDefaults() {
+  els.showName.checked = true;
+  DEFAULT_METRICS.forEach((k) => (metricInputs[k].checked = true));
+  updateResourceUI();
+  updateMetricsUI();
+}
+
 function save() {
-  $UD.sendParamFromPlugin(Utils.getFormValue(form));
+  const data = Utils.getFormValue(form);
+  data.metrics = getSelectedMetrics();
+  data.showName = els.showName.checked;
+  $UD.sendParamFromPlugin(data);
+}
+
+function onResourceTypeChange() {
+  saved.resourceType = els.resourceType.value;
+  updateResourceUI();
+  resetInstance();
+  updateMetricsUI();
+  save();
+  requestInstances(currentProject(), currentAccount());
+}
+
+function onMetricToggle(e) {
+  if (e.target.checked && getSelectedMetrics().length > maxMetrics()) {
+    e.target.checked = false;
+    setStatus(`You can show at most ${maxMetrics()} metrics`, 'warn');
+  }
+  updateMetricsUI();
+  save();
+}
+
+function onShowNameToggle() {
+  enforceMax();
+  updateMetricsUI();
+  save();
+}
+
+function enforceMax() {
+  const extra = getSelectedMetrics().slice(maxMetrics());
+  extra.forEach((k) => (metricInputs[k].checked = false));
+  return extra.length > 0;
+}
+
+function updateResourceUI() {
+  els.instanceLabel.textContent = currentType() === 'cloudsql' ? 'Database' : 'Instance';
+}
+
+function updateMetricsUI() {
+  const connVisible = currentType() === 'cloudsql';
+  els.connOpt.classList.toggle('hidden', !connVisible);
+  if (!connVisible) metricInputs.conn.checked = false;
+
+  const max = maxMetrics();
+  const atMax = getSelectedMetrics().length >= max;
+
+  METRIC_KEYS.forEach((k) => {
+    const input = metricInputs[k];
+    const available = k !== 'conn' || connVisible;
+    const locked = available && atMax && !input.checked;
+    input.disabled = !available || locked;
+    input.closest('.metric-opt').classList.toggle('disabled', locked);
+  });
+
+  els.metricsHint.textContent =
+    max === 2 ? 'Pick up to 2 metrics. Hide the name to show 3.' : 'Pick up to 3 metrics.';
 }
 
 function requestAccounts() {
@@ -106,8 +202,14 @@ function requestInstances(projectId, account) {
     return;
   }
   showOverlay();
-  setStatus('Loading instances...', 'info');
-  $UD.sendToPlugin({ type: 'listInstances', projectId, account: account || currentAccount(), gcloudPath: getGcloudPath() });
+  setStatus(currentType() === 'cloudsql' ? 'Loading databases...' : 'Loading instances...', 'info');
+  $UD.sendToPlugin({
+    type: 'listInstances',
+    projectId,
+    resourceType: currentType(),
+    account: account || currentAccount(),
+    gcloudPath: getGcloudPath(),
+  });
 }
 
 function handleAccounts({ accounts = [] }) {
@@ -153,24 +255,28 @@ function handleProjects({ projects = [] }) {
   }
 }
 
-function handleInstances({ projectId, instances = [] }) {
+function handleInstances({ projectId, resourceType = 'gce', instances = [] }) {
   hideOverlay();
-  const current = els.projectId.value || saved.projectId;
-  if (projectId !== current) return;
+  if (projectId !== currentProject() || resourceType !== currentType()) return;
 
-  const options = instances.map((i) => ({
-    value: i.id,
-    label: i.status && i.status !== 'RUNNING' ? `${i.name} (${i.status.toLowerCase()})` : i.name,
-    data: { name: i.name, zone: i.zone || '', status: i.status || '' },
-  }));
+  const isSql = currentType() === 'cloudsql';
+  const noun = isSql ? 'database' : 'instance';
+  const options = instances.map((i) => {
+    const running = !i.status || RUNNING_STATES.includes(i.status);
+    return {
+      value: i.id,
+      label: running ? i.name : `${i.name} (${i.status.toLowerCase()})`,
+      data: { name: i.name, zone: i.zone || '', status: i.status || '' },
+    };
+  });
   fillSelect(els.instanceId, options, {
     value: saved.instanceId,
-    placeholder: instances.length ? 'Select instance' : 'No instances found',
+    placeholder: instances.length ? `Select ${noun}` : `No ${noun}s found`,
   });
   syncInstanceHidden();
 
-  if (instances.length) setStatus(`${instances.length} instance(s) in ${projectId}`, 'info');
-  else setStatus(`No VMs found in ${projectId}`, 'warn');
+  if (instances.length) setStatus(`${instances.length} ${noun}(s) in ${projectId}`, 'info');
+  else setStatus(`No ${noun}s found in ${projectId}`, 'warn');
 }
 
 function handleError({ message = '' }) {
@@ -179,7 +285,7 @@ function handleError({ message = '' }) {
   if (/not found|install|no such file/i.test(message)) hint = 'gcloud not found - set its path in Advanced';
   else if (/auth|login|credential|reauth/i.test(message)) hint = 'Run: gcloud auth login';
   else if (/permission|forbidden/i.test(message)) hint = 'Permission denied on this project';
-  else if (/has not been used|disabled|api/i.test(message)) hint = 'Enable the Monitoring/Compute API';
+  else if (/has not been used|disabled|api/i.test(message)) hint = 'Enable the Monitoring / Compute / Cloud SQL Admin API';
   setStatus(hint, 'error');
 }
 
@@ -187,11 +293,27 @@ function applySaved(params) {
   if (!params || typeof params !== 'object') return;
   saved = { ...saved, ...params };
   Utils.setFormValue(saved, form);
+
+  els.showName.checked = saved.showName !== false;
+  const chosen = normalizeMetrics(saved.metrics);
+  const metrics = chosen.length ? chosen : DEFAULT_METRICS;
+  METRIC_KEYS.forEach((k) => (metricInputs[k].checked = metrics.includes(k)));
+
+  updateResourceUI();
+  enforceMax();
+  updateMetricsUI();
+
   if (gotAccounts && saved.account) els.account.value = saved.account;
   if (gotProjects && saved.projectId) {
     els.projectId.value = saved.projectId;
     requestInstances(saved.projectId, currentAccount());
   }
+}
+
+function normalizeMetrics(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === 'string') return value.split(',').map((s) => s.trim()).filter(Boolean);
+  return [];
 }
 
 function resetProjectAndInstance() {

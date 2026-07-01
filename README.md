@@ -4,7 +4,7 @@
 
 # GCP Monitor — Ulanzi Studio Plugin
 
-**Live CPU and RAM of a Google Cloud (Compute Engine) VM, right on a key of your Ulanzi macro keypad — with a clear DOWN alert when the machine stops reporting.**
+**Live metrics of your Google Cloud resources — Compute Engine VMs and Cloud SQL databases — right on a key of your Ulanzi macro keypad, with a clear DOWN alert when a resource stops reporting.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Ulanzi Studio](https://img.shields.io/badge/Ulanzi%20Studio-%E2%89%A5%202.1.4-1EE0C6)
@@ -17,7 +17,9 @@
 
 ## Overview
 
-**GCP Monitor** turns one key of your Ulanzi Deck (D200 / D200H / D200X and compatible keypads) into a live health tile for a single Google Cloud VM. Each key polls Cloud Monitoring, draws CPU and RAM gauges, and flips to a warning icon the moment the instance goes quiet.
+**GCP Monitor** turns one key of your Ulanzi Deck (D200 / D200H / D200X and compatible keypads) into a live health tile for a single Google Cloud resource — either a **Compute Engine VM** or a **Cloud SQL database**. Each key polls Cloud Monitoring, draws the metrics you choose, and flips to a warning icon the moment the resource goes quiet.
+
+Pick **up to 2 metrics per key**, or **3** when you hide the on-tile name (handy when you label the key with Ulanzi Studio's native Title underneath). Available metrics are **CPU, RAM and Disk** for both resource types, plus **Connections** for Cloud SQL.
 
 Authentication reuses the `gcloud` CLI you already have installed and logged in — **no OAuth client, no service-account key, no secret is ever stored by the plugin**. You can even switch between multiple logged-in `gcloud` accounts from the key's settings.
 
@@ -30,12 +32,15 @@ Authentication reuses the `gcloud` CLI you already have installed and logged in 
 
 ## Features
 
-- **Live CPU and RAM gauges** rendered directly on the key, refreshed on a configurable interval.
+- **Compute Engine and Cloud SQL** — monitor a VM or a database instance from the same action; the settings panel switches its pickers and metrics accordingly.
+- **Choose your metrics** — show **up to 2** of CPU / RAM / Disk (+ Connections for Cloud SQL), or **up to 3** when the on-tile name is hidden.
+- **Optional on-tile name** — turn it off to reclaim a row and rely on Ulanzi Studio's native Title label instead.
+- **Live gauges** rendered directly on the key, refreshed on a configurable interval; percentage metrics get a color bar, counts (Connections) show the raw value.
 - **DOWN alert** — if no CPU sample arrives within your threshold (default **5 min**), the key switches to a warning icon with the data age (`no data 7m`).
 - **Color thresholds** — gauges shift from green to amber to red as utilization climbs, so a glance is enough.
 - **Multi-account** — pick any account already authenticated in `gcloud auth list`; tokens are cached per account.
-- **Cascading pickers** — Account → Project → Instance dropdowns populate automatically in the settings panel.
-- **Configurable click action** — a key press either **refreshes every GCP Monitor key at once**, or **opens the VM's monitoring page** in your default browser.
+- **Cascading pickers** — Account → Project → Resource → Instance dropdowns populate automatically in the settings panel.
+- **Configurable click action** — a key press either **refreshes every GCP Monitor key at once**, or **opens the resource's page** in your default browser.
 - **Zero stored secrets** — access tokens come from your local `gcloud` on demand and live only in memory.
 - **Cross-platform `gcloud` discovery** for Windows and macOS, with a manual path override for non-standard installs.
 
@@ -45,28 +50,39 @@ Authentication reuses the `gcloud` CLI you already have installed and logged in 
 Ulanzi Studio  ──WebSocket──▶  plugin/app.js (Node.js)
                                    │
                                    ├─ gcloud CLI ──▶ access token + account/project/instance lists
-                                   └─ Cloud Monitoring API v3 ──▶ CPU & RAM time series
+                                   └─ Cloud Monitoring API v3 ──▶ metric time series (CPU, RAM, Disk, Connections)
                                           │
                                    render.js (SVG ▶ base64) ──▶ setBaseDataIcon() ──▶ key
 ```
 
-- **CPU** comes from `compute.googleapis.com/instance/cpu/utilization`. This metric is emitted by the hypervisor for every running VM, so its **absence is the signal used to detect a down/unreachable machine**.
-- **RAM** comes from `agent.googleapis.com/memory/percent_used` (state `used`). This one is produced by the **Google Cloud Ops Agent**; if the agent is not installed on the VM, RAM simply shows `N/A` — the key is *not* marked down for that reason alone.
-- The service queries a 12-minute lookback window and keeps the most recent point. "Freshness" is compared against your **Down after (min)** setting.
+- **CPU is the health signal.** For a VM it comes from `compute.googleapis.com/instance/cpu/utilization`; for Cloud SQL from `cloudsql.googleapis.com/database/cpu/utilization`. Both are emitted server-side for every running resource, so the **absence of a fresh CPU sample is what marks the key as DOWN** — regardless of which metrics you display.
+- **Metrics by resource type:**
+
+  | Metric | Compute Engine | Cloud SQL |
+  |---|---|---|
+  | CPU (%) | `compute.googleapis.com/instance/cpu/utilization` | `cloudsql.googleapis.com/database/cpu/utilization` |
+  | RAM (%) | `agent.googleapis.com/memory/percent_used` *(Ops Agent)* | `cloudsql.googleapis.com/database/memory/utilization` |
+  | Disk (%) | `agent.googleapis.com/disk/percent_used` *(Ops Agent)* | `cloudsql.googleapis.com/database/disk/utilization` |
+  | Connections | — | `cloudsql.googleapis.com/database/network/connections` |
+
+- **Ops Agent (Compute Engine only):** RAM and Disk are produced by the [Ops Agent](https://cloud.google.com/monitoring/agent/ops-agent/install-index). If it is not installed, those metrics show `N/A` — the key is *not* marked down for that reason alone. Cloud SQL reports every metric natively, no agent required.
+- The service queries a 12-minute lookback window and keeps the most recent point per metric. "Freshness" is compared against your **Down after (min)** setting.
 - Icons are generated as SVG in Node.js, base64-encoded, and pushed to the key via `setBaseDataIcon` — no image files on disk, no native image libraries.
 
 ## Requirements
 
 - **Ulanzi Studio** ≥ 2.1.4 (Windows or macOS).
 - **Google Cloud SDK (`gcloud`)** installed and authenticated on the same machine (`gcloud auth login`).
-- The VM lives in **Compute Engine**, and you know (or can pick) its project.
+- The resource lives in **Compute Engine** or **Cloud SQL**, and you know (or can pick) its project.
 - **IAM permissions** for the account you select:
-  - `roles/monitoring.viewer` — read CPU/RAM time series.
-  - `roles/compute.viewer` — list instances (to populate the Instance dropdown).
+  - `roles/monitoring.viewer` — read metric time series (both resource types).
+  - `roles/compute.viewer` — list Compute Engine instances (to populate the dropdown).
+  - `roles/cloudsql.viewer` — list Cloud SQL instances (to populate the dropdown).
 - **APIs enabled** in the project:
   - Cloud Monitoring API (`monitoring.googleapis.com`)
-  - Compute Engine API (`compute.googleapis.com`)
-- **RAM only:** the [Ops Agent](https://cloud.google.com/monitoring/agent/ops-agent/install-index) installed on the target VM.
+  - Compute Engine API (`compute.googleapis.com`) — for VMs
+  - Cloud SQL Admin API (`sqladmin.googleapis.com`) — for databases
+- **Compute Engine RAM/Disk only:** the [Ops Agent](https://cloud.google.com/monitoring/agent/ops-agent/install-index) installed on the target VM. Cloud SQL needs no agent.
 
 ## Installation
 
@@ -77,7 +93,7 @@ Ulanzi Studio  ──WebSocket──▶  plugin/app.js (Node.js)
    ```
    %APPDATA%\Ulanzi\UlanziStudio\plugins\
    ```
-3. Restart Ulanzi Studio. "GCP Monitor" appears in the actions list; drag **VM CPU / RAM** onto a key.
+3. Restart Ulanzi Studio. "GCP Monitor" appears in the actions list; drag **VM / Cloud SQL** onto a key.
 
 ### Option B — build from source
 
@@ -100,8 +116,11 @@ Select the key, then use the property inspector on the right:
 | Setting | Description | Default |
 |---|---|---|
 | **Account** | Which `gcloud` account to use (from `gcloud auth list`). The active account is preselected. | active account |
-| **Project** | GCP project that owns the VM. | — |
-| **Instance** | The Compute Engine instance to monitor. | — |
+| **Project** | GCP project that owns the resource. | — |
+| **Resource** | `Compute Engine (VM)` or `Cloud SQL (database)`. Switches the instance list and available metrics. | Compute Engine |
+| **Instance / Database** | The specific instance to monitor. | — |
+| **Metrics** | Which metrics to draw: CPU / RAM / Disk (+ Connections for Cloud SQL). Up to 2, or 3 with the name hidden. | CPU + RAM |
+| **Name on top** | Show the resource name as a header on the tile. Turn off to fit a 3rd metric and use the native Title label instead. | on |
 | **Refresh (s)** | Polling interval in seconds (minimum 10). | `30` |
 | **Down after (min)** | If no CPU sample is newer than this, show the DOWN icon. | `5` |
 | **On click** | Key-press behavior — see [Click actions](#click-actions). | Refresh all data |
@@ -112,9 +131,13 @@ Use **Reload lists** to re-read accounts, projects, and instances (e.g. after `g
 ### Click actions
 
 - **Refresh all data** — refreshes *every* GCP Monitor key on your deck at once. Handy for an at-a-glance fleet check.
-- **Open details in browser** — opens the VM's Cloud Console monitoring page in your default browser, e.g.:
+- **Open details in browser** — opens the resource's Cloud Console page in your default browser:
   ```
+  # Compute Engine
   https://console.cloud.google.com/compute/instancesDetail/zones/<zone>/instances/<name>?project=<project>&tab=monitoring
+
+  # Cloud SQL
+  https://console.cloud.google.com/sql/instances/<name>/overview?project=<project>
   ```
 
 ### Multiple accounts
@@ -133,11 +156,12 @@ The plugin reads every logged-in account from `gcloud auth list`. Pick one per k
 |---|---|---|
 | `gcloud not found` | SDK not on PATH (common on macOS GUI apps) | Set **Advanced ▸ gcloud path**, or the `GCP_MONITOR_GCLOUD` env var, to the absolute binary path |
 | `run gcloud auth login` | No/expired credentials for the account | Run `gcloud auth login`, then **Reload lists** |
-| `permission denied` | Missing IAM role | Grant `roles/monitoring.viewer` (+ `roles/compute.viewer` to list instances) |
+| `permission denied` | Missing IAM role | Grant `roles/monitoring.viewer` (+ `roles/compute.viewer` for VMs, `roles/cloudsql.viewer` for databases) |
 | `monitoring API off` | Cloud Monitoring API disabled | Enable `monitoring.googleapis.com` in the project |
+| Empty **Database** list | Cloud SQL Admin API disabled or missing role | Enable `sqladmin.googleapis.com` and grant `roles/cloudsql.viewer` |
 | `project not found` | Wrong project / no access | Reselect the project for the chosen account |
-| RAM shows `N/A` | Ops Agent not installed | Install the Ops Agent on the VM (CPU keeps working regardless) |
-| Key shows DOWN but VM is up | Threshold too tight or metrics lag | Increase **Down after (min)** |
+| RAM / Disk show `N/A` | Ops Agent not installed (Compute Engine) | Install the Ops Agent on the VM (CPU keeps working regardless); Cloud SQL needs no agent |
+| Key shows DOWN but resource is up | Threshold too tight or metrics lag | Increase **Down after (min)** |
 
 ## Development
 
@@ -148,9 +172,9 @@ com.ulanzi.gcpmonitor.ulanziPlugin/
 ├── en.json                       # UI localization (English)
 ├── plugin/
 │   ├── app.js                    # Main service: SDK events, routing, refreshAll hook
-│   ├── actions/MachineAction.js  # Per-key logic: polling, state machine, click action
-│   ├── gcp/gcloud.js             # gcloud discovery, auth, account/project/instance lists
-│   ├── gcp/monitoring.js         # Cloud Monitoring API v3 queries
+│   ├── actions/MachineAction.js  # Per-key logic: polling, metric selection, state machine, click action
+│   ├── gcp/gcloud.js             # gcloud discovery, auth, account/project/instance/database lists
+│   ├── gcp/monitoring.js         # Cloud Monitoring API v3 queries + metric registry (GCE + Cloud SQL)
 │   ├── gcp/render.js             # SVG icon rendering for every state
 │   └── plugin-common-node/       # Vendored UlanziDeck SDK (Node)
 ├── property-inspector/machine/   # Settings UI (HTML + JS)

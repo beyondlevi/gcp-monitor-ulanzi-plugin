@@ -1,6 +1,6 @@
 import { UlanziApi } from './plugin-common-node/index.js';
 import MachineAction from './actions/MachineAction.js';
-import { listProjects, listInstances, listAccounts } from './gcp/gcloud.js';
+import { listProjects, listInstances, listSqlInstances, listAccounts } from './gcp/gcloud.js';
 
 const MAIN_UUID = 'com.ulanzi.ulanzistudio.gcpmonitor';
 
@@ -57,8 +57,11 @@ $UD.onSendToPlugin(async (jsn) => {
       const projects = await listProjects({ account, override });
       $UD.sendToPropertyInspector({ type: 'projects', projects, account }, ctx);
     } else if (msg.type === 'listInstances') {
-      const instances = await listInstances(msg.projectId, { account, override });
-      $UD.sendToPropertyInspector({ type: 'instances', projectId: msg.projectId, instances }, ctx);
+      const resourceType = msg.resourceType === 'cloudsql' ? 'cloudsql' : 'gce';
+      const instances = resourceType === 'cloudsql'
+        ? await listSqlInstances(msg.projectId, { account, override })
+        : await listInstances(msg.projectId, { account, override });
+      $UD.sendToPropertyInspector({ type: 'instances', projectId: msg.projectId, resourceType, instances }, ctx);
     }
   } catch (e) {
     $UD.sendToPropertyInspector({ type: 'error', op: msg.type, message: e?.message || String(e) }, ctx);

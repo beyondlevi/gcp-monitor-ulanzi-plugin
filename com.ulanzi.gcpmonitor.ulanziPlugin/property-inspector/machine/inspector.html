@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui,viewport-fit=cover" />
   <title>GCP Monitor - inspector</title>
   <link rel="stylesheet" href="../../libs/css/uspi.css" />
+  <style>
+    .metric-group { flex-wrap: wrap; gap: 8px 16px; justify-content: flex-start; }
+    .metric-opt { display: inline-flex; align-items: center; white-space: nowrap; }
+    .metric-opt label { line-height: 20px; }
+    .metric-opt.disabled label { opacity: 0.4; cursor: not-allowed; }
+    .metric-opt.hidden { display: none; }
+  </style>
 </head>
 <body>
   <div class="uspi-wrapper hidden">
@@ -26,7 +33,15 @@
       </div>
 
       <div class="uspi-item">
-        <div class="uspi-item-label" data-localize>Instance</div>
+        <div class="uspi-item-label" data-localize>Resource</div>
+        <select class="uspi-item-value" name="resourceType" id="resourceType">
+          <option value="gce" data-localize>Compute Engine (VM)</option>
+          <option value="cloudsql" data-localize>Cloud SQL (database)</option>
+        </select>
+      </div>
+
+      <div class="uspi-item">
+        <div class="uspi-item-label" data-localize id="instanceLabel">Instance</div>
         <select class="uspi-item-value" name="instanceId" id="instanceId">
           <option value="" data-localize>Select a project first</option>
         </select>
@@ -34,6 +49,27 @@
 
       <input type="hidden" name="instanceName" id="instanceName" />
       <input type="hidden" name="zone" id="zone" />
+
+      <div class="uspi-heading" data-localize>Display</div>
+
+      <div class="uspi-item">
+        <div class="uspi-item-label" data-localize>Metrics</div>
+        <div class="uspi-item-value metric-group" id="metrics">
+          <span class="metric-opt"><input type="checkbox" id="m_cpu" data-metric="cpu" /><label for="m_cpu">CPU</label></span>
+          <span class="metric-opt"><input type="checkbox" id="m_mem" data-metric="mem" /><label for="m_mem" data-localize>RAM</label></span>
+          <span class="metric-opt"><input type="checkbox" id="m_disk" data-metric="disk" /><label for="m_disk" data-localize>Disk</label></span>
+          <span class="metric-opt" id="opt_conn"><input type="checkbox" id="m_conn" data-metric="conn" /><label for="m_conn" data-localize>Connections</label></span>
+        </div>
+      </div>
+
+      <div class="uspi-item">
+        <div class="uspi-item-label" data-localize>Name on top</div>
+        <div class="uspi-item-value" style="justify-content: flex-start">
+          <span class="metric-opt"><input type="checkbox" id="showName" /><label for="showName" data-localize>Show name on the key</label></span>
+        </div>
+      </div>
+
+      <p class="tip info" id="metricsHint" data-localize>Pick up to 2 metrics, or 3 with the name hidden.</p>
 
       <div class="uspi-heading" data-localize>Options</div>
 
@@ -67,7 +103,7 @@
           <div class="uspi-item-label" data-localize>gcloud path</div>
           <input class="uspi-item-value" type="text" name="gcloudPath" id="gcloudPath" placeholder="auto-detect" />
         </div>
-        <p class="tip info" data-localize>Leave empty to auto-detect gcloud. RAM (%) needs the Ops Agent installed on the VM.</p>
+        <p class="tip info" data-localize>Leave empty to auto-detect gcloud. On Compute Engine, RAM/Disk need the Ops Agent; Cloud SQL reports every metric natively.</p>
       </details>
     </form>
 

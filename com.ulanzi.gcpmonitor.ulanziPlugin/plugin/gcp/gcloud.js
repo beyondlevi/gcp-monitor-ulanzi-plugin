@@ -169,3 +169,21 @@ export const listInstances = async (projectId, { account, override } = {}) => {
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 };
+
+export const listSqlInstances = async (projectId, { account, override } = {}) => {
+  if (!projectId) return [];
+  const out = await gcloud(
+    ['sql', 'instances', 'list', `--project=${projectId}`, '--format=json', ...accountArgs(account)],
+    { override },
+  );
+  const arr = JSON.parse(out || '[]');
+  return arr
+    .map((i) => ({
+      id: i.name,
+      name: i.name,
+      zone: i.region || '',
+      status: i.state || '',
+      databaseVersion: i.databaseVersion || '',
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+};

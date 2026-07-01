@@ -1,9 +1,9 @@
 {
   "Author": "Ulanzi Dev",
   "Name": "GCP Monitor",
-  "Description": "Show CPU and RAM of a Google Cloud (GCE) VM on a key. Switch between logged-in gcloud accounts; click to refresh all keys or open the VM in the browser. Alerts when the machine is down or has no data in the last minutes.",
+  "Description": "Monitor Google Cloud resources on a key: Compute Engine VMs and Cloud SQL databases. Pick up to 2 metrics per key (or 3 when the name is hidden) from CPU, RAM, Disk and Connections. Switch between logged-in gcloud accounts; click to refresh all keys or open the resource in the console. Alerts when the resource is down or has no data in the last minutes.",
   "Icon": "assets/icons/icon.png",
-  "Version": "1.1.0",
+  "Version": "1.2.0",
   "Category": "GCP Monitor",
   "CategoryIcon": "assets/icons/category.png",
   "CodePath": "plugin/app.js",
@@ -12,14 +12,14 @@
   "UUID": "com.ulanzi.ulanzistudio.gcpmonitor",
   "Actions": [
     {
-      "Name": "VM CPU / RAM",
+      "Name": "VM / Cloud SQL",
       "Icon": "assets/icons/action.png",
       "PropertyInspectorPath": "property-inspector/machine/inspector.html",
       "state": 0,
       "States": [
         { "Name": "Monitor", "Image": "assets/icons/action.png" }
       ],
-      "Tooltip": "Monitor CPU and RAM of a GCP Compute Engine instance",
+      "Tooltip": "Monitor CPU, RAM, Disk (and Connections for Cloud SQL) of a GCP Compute Engine VM or Cloud SQL instance",
       "UUID": "com.ulanzi.ulanzistudio.gcpmonitor.machine",
       "SupportedInMultiActions": false,
       "Controllers": ["Keypad"],

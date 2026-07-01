@@ -1,10 +1,11 @@
 import { getAccessToken, invalidateToken } from '../gcp/gcloud.js';
-import { getInstanceMetrics } from '../gcp/monitoring.js';
+import { getMetrics, availableMetrics, metricKind, METRIC_LABELS, HEALTH_METRIC } from '../gcp/monitoring.js';
 import { renderMetrics, renderDown, renderError, renderSetup, renderLoading } from '../gcp/render.js';
 
 const DEFAULT_REFRESH_SEC = 30;
 const DEFAULT_DOWN_MIN = 5;
 const MIN_REFRESH_SEC = 10;
+const DEFAULT_METRICS = ['cpu', 'mem'];
 
 const fmtAge = (ms) => {
   const s = Math.max(0, Math.round(ms / 1000));
@@ -13,6 +14,12 @@ const fmtAge = (ms) => {
   if (m < 60) return `${m}m`;
   const h = Math.floor(m / 60);
   return `${h}h${m % 60}m`;
+};
+
+const normalizeMetrics = (value) => {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  if (typeof value === 'string') return value.split(',').map((s) => s.trim()).filter(Boolean);
+  return [];
 };
 
 const shortError = (e) => {
@@ -48,13 +55,42 @@ export default class MachineAction {
     this.refresh();
   }
 
+  resourceType() {
+    return this.settings.resourceType === 'cloudsql' ? 'cloudsql' : 'gce';
+  }
+
+  resource() {
+    return { type: this.resourceType(), projectId: this.settings.projectId, instanceId: this.settings.instanceId };
+  }
+
+  showName() {
+    return this.settings.showName !== false;
+  }
+
+  metrics() {
+    const available = availableMetrics(this.resourceType());
+    const chosen = normalizeMetrics(this.settings.metrics).filter((m) => available.includes(m));
+    const list = chosen.length ? chosen : DEFAULT_METRICS.filter((m) => available.includes(m));
+    return list.slice(0, this.showName() ? 2 : 3);
+  }
+
   openConsole() {
-    const { zone, instanceName, projectId } = this.settings;
-    if (!zone || !instanceName || !projectId) {
+    const { zone, instanceName, projectId, instanceId } = this.settings;
+    const name = instanceName || instanceId;
+    if (!projectId || !name) {
+      this.$UD.toast('Set project and instance first');
+      return;
+    }
+    if (this.resourceType() === 'cloudsql') {
+      const url = `https://console.cloud.google.com/sql/instances/${encodeURIComponent(name)}/overview`;
+      this.$UD.openUrl(url, false, { project: projectId });
+      return;
+    }
+    if (!zone) {
       this.$UD.toast('Set project, zone and instance first');
       return;
     }
-    const url = `https://console.cloud.google.com/compute/instancesDetail/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(instanceName)}`;
+    const url = `https://console.cloud.google.com/compute/instancesDetail/zones/${encodeURIComponent(zone)}/instances/${encodeURIComponent(name)}`;
     this.$UD.openUrl(url, false, { project: projectId, tab: 'monitoring' });
   }
 
@@ -82,25 +118,40 @@ export default class MachineAction {
     this.busy = true;
     try {
       const token = await getAccessToken({ account: this.settings.account, override: this.settings.gcloudPath });
-      const { cpu, mem } = await getInstanceMetrics(token, this.settings.projectId, this.settings.instanceId);
+      const type = this.resourceType();
+      const keys = this.metrics();
+      const results = await getMetrics(token, this.resource(), keys);
+
+      const health = results[HEALTH_METRIC];
+      if (health?.error) throw health.error;
 
       const thresholdMs = (Number(this.settings.downThresholdMinutes) || DEFAULT_DOWN_MIN) * 60 * 1000;
       const now = Date.now();
-      const cpuFresh = cpu && now - cpu.tsMs <= thresholdMs;
+      const healthFresh = health && now - health.tsMs <= thresholdMs;
 
-      if (!cpuFresh) {
-        const ageText = cpu ? `no data ${fmtAge(now - cpu.tsMs)}` : `no data >${Math.round(thresholdMs / 60000)}m`;
-        this.setIcon(renderDown({ name: this.label(), ageText }));
+      if (!healthFresh) {
+        const ageText = health ? `no data ${fmtAge(now - health.tsMs)}` : `no data >${Math.round(thresholdMs / 60000)}m`;
+        this.setIcon(renderDown({ name: this.label(), ageText, showName: this.showName() }));
         return;
       }
 
-      const memPercent = mem && now - mem.tsMs <= thresholdMs ? mem.percent : NaN;
-      this.setIcon(renderMetrics({ name: this.label(), cpuPercent: cpu.percent, memPercent }));
+      const rows = keys.map((key) => {
+        const r = results[key];
+        const fresh = r && !r.error && Number.isFinite(r.value) && now - r.tsMs <= thresholdMs;
+        return {
+          label: METRIC_LABELS[key] || key.toUpperCase(),
+          kind: metricKind(type, key),
+          value: fresh ? r.value : NaN,
+          stale: !fresh,
+        };
+      });
+
+      this.setIcon(renderMetrics({ name: this.label(), showName: this.showName(), rows }));
     } catch (e) {
       if (e?.status === 401 || e?.status === 403) invalidateToken(this.settings.account);
       this.$UD.showAlert(this.context);
       this.$UD.logMessage(`[gcpmonitor] refresh failed: ${e?.message || e}`, 'error');
-      this.setIcon(renderError({ title: this.label(), message: shortError(e) }));
+      this.setIcon(renderError({ title: this.label(), message: shortError(e), showName: this.showName() }));
     } finally {
       this.busy = false;
     }

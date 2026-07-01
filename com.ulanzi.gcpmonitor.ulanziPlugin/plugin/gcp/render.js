@@ -32,26 +32,53 @@ const text = (x, y, str, { size = 12, fill = '#ffffff', weight = 400, anchor = '
   `<text x="${x}" y="${y}" font-family="${FONT}" font-size="${size}" fill="${fill}" font-weight="${weight}"` +
   `${anchor !== 'start' ? ` text-anchor="${anchor}"` : ''}${spacing ? ` letter-spacing="${spacing}"` : ''}>${esc(str)}</text>`;
 
-export const renderMetrics = ({ name, cpuPercent, memPercent }) => {
-  const cpu = Math.round(clamp(cpuPercent, 0, 100));
-  const memKnown = Number.isFinite(memPercent);
-  const mem = memKnown ? Math.round(clamp(memPercent, 0, 100)) : null;
-  const inner =
-    text(12, 22, clip(name, 16), { size: 13, fill: '#c7c9cc', weight: 600 }) +
-    text(12, 58, 'CPU', { size: 12, fill: '#9a9da1' }) +
-    text(132, 58, `${cpu}%`, { size: 16, weight: 700, anchor: 'end' }) +
-    bar(12, 64, 120, 10, cpu, colorFor(cpu)) +
-    text(12, 102, 'RAM', { size: 12, fill: '#9a9da1' }) +
-    text(132, 102, memKnown ? `${mem}%` : 'N/A', { size: 16, weight: 700, anchor: 'end', fill: memKnown ? '#ffffff' : '#7c7f84' }) +
-    bar(12, 108, 120, 10, memKnown ? mem : 0, memKnown ? colorFor(mem) : '#5a5d63') +
-    '<circle cx="17" cy="130" r="4" fill="#3ddc84"/>' +
-    text(27, 134, 'live', { size: 10, fill: '#7c7f84' });
-  return dataUri(frame(inner));
+const fmtCount = (n) => {
+  const v = Math.round(n);
+  if (v >= 100000) return `${Math.round(v / 1000)}k`;
+  if (v >= 1000) return `${(v / 1000).toFixed(1)}k`;
+  return String(v);
 };
 
-export const renderDown = ({ name, ageText }) => {
+const metricRow = (m, labelY, barY) => {
+  const label = text(12, labelY, clip(m.label, 5), { size: 12, fill: '#9a9da1' });
+  if (m.stale || !Number.isFinite(m.value)) {
+    return (
+      label +
+      text(132, labelY, 'N/A', { size: 16, weight: 700, anchor: 'end', fill: '#7c7f84' }) +
+      bar(12, barY, 120, 10, 0, '#5a5d63')
+    );
+  }
+  if (m.kind === 'count') {
+    return label + text(132, labelY, fmtCount(m.value), { size: 18, weight: 700, anchor: 'end' });
+  }
+  const pct = Math.round(clamp(m.value, 0, 100));
+  return (
+    label +
+    text(132, labelY, `${pct}%`, { size: 16, weight: 700, anchor: 'end' }) +
+    bar(12, barY, 120, 10, pct, colorFor(pct))
+  );
+};
+
+export const renderMetrics = ({ name, showName = true, rows = [] }) => {
+  const items = rows.slice(0, showName ? 2 : 3);
+  const count = Math.max(1, items.length);
+  const areaTop = showName ? 40 : 16;
+  const slotH = (136 - areaTop) / count;
+
+  const parts = ['<circle cx="133" cy="13" r="4" fill="#3ddc84"/>'];
+  if (showName) parts.push(text(12, 22, clip(name, 16), { size: 13, fill: '#c7c9cc', weight: 600 }));
+
+  items.forEach((m, i) => {
+    const pairTop = areaTop + i * slotH + (slotH - 26) / 2;
+    parts.push(metricRow(m, Math.round(pairTop + 12), Math.round(pairTop + 18)));
+  });
+
+  return dataUri(frame(parts.join('')));
+};
+
+export const renderDown = ({ name, ageText, showName = true }) => {
   const inner =
-    text(72, 20, clip(name, 18), { size: 12, fill: '#c7c9cc', weight: 600, anchor: 'middle' }) +
+    (showName ? text(72, 20, clip(name, 18), { size: 12, fill: '#c7c9cc', weight: 600, anchor: 'middle' }) : '') +
     '<g transform="translate(72,74)">' +
     '<path d="M0,-30 L34,28 L-34,28 Z" fill="#3a1b1b" stroke="#ff4d4f" stroke-width="3" stroke-linejoin="round"/>' +
     '<rect x="-3" y="-14" width="6" height="24" rx="3" fill="#ff4d4f"/>' +
@@ -62,9 +89,9 @@ export const renderDown = ({ name, ageText }) => {
   return dataUri(frame(inner, '#241111'));
 };
 
-export const renderError = ({ title, message }) => {
+export const renderError = ({ title, message, showName = true }) => {
   const inner =
-    text(72, 22, clip(title, 16), { size: 12, fill: '#c7c9cc', weight: 600, anchor: 'middle' }) +
+    (showName ? text(72, 22, clip(title, 16), { size: 12, fill: '#c7c9cc', weight: 600, anchor: 'middle' }) : '') +
     '<g transform="translate(72,66)">' +
     '<circle r="26" fill="#3a2a12" stroke="#ffb020" stroke-width="3"/>' +
     '<rect x="-3" y="-15" width="6" height="20" rx="3" fill="#ffb020"/>' +

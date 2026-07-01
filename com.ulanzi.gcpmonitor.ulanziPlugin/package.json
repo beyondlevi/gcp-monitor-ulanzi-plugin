@@ -1,7 +1,7 @@
 {
   "name": "gcp-monitor-ulanzi-plugin",
-  "version": "1.1.0",
-  "description": "Ulanzi Studio plugin that shows CPU/RAM of a Google Cloud Compute Engine VM, with a down-alert when metrics go stale.",
+  "version": "1.2.0",
+  "description": "Ulanzi Studio plugin that shows live metrics (CPU, RAM, Disk, Connections) of Google Cloud Compute Engine VMs and Cloud SQL databases, with a down-alert when metrics go stale.",
   "type": "module",
   "author": "beyondlevi",
   "license": "MIT",
