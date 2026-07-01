@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 #
 # Build the installable .ulanziPlugin zip with runtime dependencies bundled.
-# Usage: ./scripts/package.sh
+# Usage: sh scripts/package.sh   (or ./scripts/package.sh)
 #
-set -euo pipefail
+set -eu
 
 PLUGIN="com.ulanzi.gcpmonitor.ulanziPlugin"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
