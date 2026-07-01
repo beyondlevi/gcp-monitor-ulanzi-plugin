@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,minimal-ui,viewport-fit=cover" />
+  <title>GCP Monitor - inspector</title>
+  <link rel="stylesheet" href="../../libs/css/uspi.css" />
+</head>
+<body>
+  <div class="uspi-wrapper hidden">
+    <form id="property-inspector">
+      <div class="uspi-heading" data-localize>Google Cloud</div>
+
+      <div class="uspi-item">
+        <div class="uspi-item-label" data-localize>Account</div>
+        <select class="uspi-item-value" name="account" id="account">
+          <option value="" data-localize>Loading...</option>
+        </select>
+      </div>
+
+      <div class="uspi-item">
+        <div class="uspi-item-label" data-localize>Project</div>
+        <select class="uspi-item-value" name="projectId" id="projectId">
+          <option value="" data-localize>Loading...</option>
+        </select>
+      </div>
+
+      <div class="uspi-item">
+        <div class="uspi-item-label" data-localize>Instance</div>
+        <select class="uspi-item-value" name="instanceId" id="instanceId">
+          <option value="" data-localize>Select a project first</option>
+        </select>
+      </div>
+
+      <input type="hidden" name="instanceName" id="instanceName" />
+      <input type="hidden" name="zone" id="zone" />
+
+      <div class="uspi-heading" data-localize>Options</div>
+
+      <div class="uspi-item">
+        <div class="uspi-item-label" data-localize>Refresh (s)</div>
+        <input class="uspi-item-value" type="number" min="10" step="5" name="refreshInterval" id="refreshInterval" value="30" />
+      </div>
+
+      <div class="uspi-item">
+        <div class="uspi-item-label" data-localize>Down after (min)</div>
+        <input class="uspi-item-value" type="number" min="1" step="1" name="downThresholdMinutes" id="downThresholdMinutes" value="5" />
+      </div>
+
+      <div class="uspi-item">
+        <div class="uspi-item-label" data-localize>On click</div>
+        <select class="uspi-item-value" name="clickAction" id="clickAction">
+          <option value="refresh" data-localize>Refresh all data</option>
+          <option value="open" data-localize>Open details in browser</option>
+        </select>
+      </div>
+
+      <div class="uspi-item">
+        <button type="button" class="uspi-item-value" id="refreshBtn" data-localize>Reload lists</button>
+      </div>
+
+      <p class="tip info" id="status" data-localize>Reading gcloud accounts...</p>
+
+      <details>
+        <summary data-localize>Advanced</summary>
+        <div class="uspi-item" style="margin-top: 8px">
+          <div class="uspi-item-label" data-localize>gcloud path</div>
+          <input class="uspi-item-value" type="text" name="gcloudPath" id="gcloudPath" placeholder="auto-detect" />
+        </div>
+        <p class="tip info" data-localize>Leave empty to auto-detect gcloud. RAM (%) needs the Ops Agent installed on the VM.</p>
+      </details>
+    </form>
+
+    <div class="loading-overlay hidden" id="overlay">
+      <div class="spinner"></div>
+      <div data-localize>Loading...</div>
+    </div>
+  </div>
+
+  <script src="../../libs/js/constants.js"></script>
+  <script src="../../libs/js/eventEmitter.js"></script>
+  <script src="../../libs/js/timers.js"></script>
+  <script src="../../libs/js/utils.js"></script>
+  <script src="../../libs/js/ulanziApi.js"></script>
+
+  <script src="./inspector.js"></script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+{
+  "Name": "GCP Monitor",
+  "Description": "Show CPU and RAM of a Google Cloud (GCE) VM on a key. Alerts when the machine is down or has no data in the last minutes.",
+  "Actions": [
+    { "Name": "VM CPU / RAM", "Tooltip": "Monitor CPU and RAM of a GCP Compute Engine instance" }
+  ],
+  "Localization": {
+    "Google Cloud": "Google Cloud",
+    "Account": "Account",
+    "Project": "Project",
+    "Instance": "Instance",
+    "Options": "Options",
+    "Refresh (s)": "Refresh (s)",
+    "Down after (min)": "Down after (min)",
+    "On click": "On click",
+    "Refresh all data": "Refresh all data",
+    "Open details in browser": "Open details in browser",
+    "Reload lists": "Reload lists",
+    "Reading gcloud accounts...": "Reading gcloud accounts...",
+    "Advanced": "Advanced",
+    "gcloud path": "gcloud path",
+    "Leave empty to auto-detect gcloud. RAM (%) needs the Ops Agent installed on the VM.": "Leave empty to auto-detect gcloud. RAM (%) needs the Ops Agent installed on the VM.",
+    "Loading...": "Loading...",
+    "Select a project first": "Select a project first"
+  }
+}

@@ -1,0 +1,12 @@
+# Dependencies (installed via `npm install`; bundled only into the release zip)
+node_modules/
+
+# Build artifacts
+*.zip
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+*.log
+.vscode/
+.idea/

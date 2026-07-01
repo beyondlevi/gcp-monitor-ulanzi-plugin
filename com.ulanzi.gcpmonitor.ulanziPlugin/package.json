@@ -1,0 +1,19 @@
+{
+  "name": "gcp-monitor-ulanzi-plugin",
+  "version": "1.1.0",
+  "description": "Ulanzi Studio plugin that shows CPU/RAM of a Google Cloud Compute Engine VM, with a down-alert when metrics go stale.",
+  "type": "module",
+  "author": "beyondlevi",
+  "license": "MIT",
+  "homepage": "https://github.com/beyondlevi/gcp-monitor-ulanzi-plugin",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/beyondlevi/gcp-monitor-ulanzi-plugin.git"
+  },
+  "scripts": {
+    "start": "node plugin/app.js"
+  },
+  "dependencies": {
+    "ws": "8.18.0"
+  }
+}
