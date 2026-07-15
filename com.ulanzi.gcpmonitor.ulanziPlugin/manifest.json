@@ -3,7 +3,7 @@
   "Name": "GCP Monitor",
   "Description": "Monitor Google Cloud resources on a key: Compute Engine VMs and Cloud SQL databases. Pick up to 2 metrics per key (or 3 when the name is hidden) from CPU, RAM, Disk and Connections. Switch between logged-in gcloud accounts; click to refresh all keys or open the resource in the console. Alerts when the resource is down or has no data in the last minutes.",
   "Icon": "assets/icons/icon.png",
-  "Version": "1.2.1",
+  "Version": "1.2.2",
   "Category": "GCP Monitor",
   "CategoryIcon": "assets/icons/category.png",
   "CodePath": "plugin/app.js",
