@@ -6,6 +6,7 @@
 
 **Live metrics of your Google Cloud resources — Compute Engine VMs and Cloud SQL databases — right on a key of your Ulanzi macro keypad, with a clear DOWN alert when a resource stops reporting.**
 
+[![Available on Ulanzi Community Store](https://raw.githubusercontent.com/narlei/ulanzicommunitystore/main/docs/badges/ulanzi-community-store.svg)](https://ulanzicommunitystore.narlei.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Ulanzi Studio](https://img.shields.io/badge/Ulanzi%20Studio-%E2%89%A5%202.1.4-1EE0C6)
 ![Node](https://img.shields.io/badge/Node-%E2%89%A5%2020-3C873A)
