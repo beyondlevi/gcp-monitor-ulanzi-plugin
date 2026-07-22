@@ -1,0 +1,7 @@
+{
+  "cover": "resources/cover.png",
+  "screenshots": ["resources/banner1.png", "resources/banner2.png"],
+  "longDescription": "Monitor your Google Cloud resources directly on your Ulanzi macro keypad — no dashboards, no browser tabs.\n\n**What it shows**\n- **CPU & RAM** — real-time usage polled from the Ops Agent, with configurable warning/critical thresholds that change the button color.\n- **Disk** — actual partition usage (snap/loop devices excluded so you always see the real number).\n- **Connections** — active connections for Cloud SQL instances, with a down-alert when data goes stale.\n\n**Key behaviours**\n- Supports both **Compute Engine VMs** and **Cloud SQL** databases in the same key type.\n- Switch between multiple **gcloud accounts** from the Property Inspector.\n- Click any key to **open the resource directly** in the GCP Console.\n- Configurable **polling interval** and stale-data timeout; the button turns red with a DOWN badge when the instance stops reporting.\n- Up to 2 metrics per key (or 3 when the name label is hidden).\n\n**Requirements**\n- Google Cloud project with Monitoring API enabled.\n- Ops Agent installed on the VM (for Compute Engine metrics).\n- A service account key or Application Default Credentials (`gcloud auth login`).",
+  "deviceTypes": ["deck"],
+  "tags": ["gcp", "cloud", "monitoring", "devops", "google-cloud"]
+}
